@@ -19,8 +19,15 @@ export class UserController {
     async renderUsers(nonTrainedUser) {
         const users = await this.#userService.getDefaultUsers();
 
-        this.#userService.addUser(nonTrainedUser);
-        const defaultAndNonTrained = [nonTrainedUser, ...users];
+        // Verifica se o usuário já existe antes de adicionar
+        const userExists = users.some(u => u.id === nonTrainedUser.id);
+        if (!userExists) {
+            await this.#userService.addUser(nonTrainedUser);
+        }
+
+        const defaultAndNonTrained = userExists
+            ? users
+            : [nonTrainedUser, ...users];
 
         this.#userView.renderUserOptions(defaultAndNonTrained);
         this.setupCallbacks();

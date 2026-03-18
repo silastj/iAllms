@@ -11,27 +11,30 @@ import { ModelView } from './view/ModelTrainingView.js';
 import Events from './events/events.js';
 import { WorkerController } from './controller/WorkerController.js';
 
-// Create shared services
+// Inicialização dos serviços
 const userService = new UserService();
 const productService = new ProductService();
 
-// Create views
+// Inicialização das views
 const userView = new UserView();
 const productView = new ProductView();
 const modelView = new ModelView();
 const tfVisorView = new TFVisorView();
+
+// Inicialização do Web Worker para treinamento do modelo
 const mlWorker = new Worker('/src/workers/modelTrainingWorker.js', { type: 'module' });
 
-// Set up worker message handler
+// Configuração do controlador do Worker
 const w = WorkerController.init({
     worker: mlWorker,
     events: Events
 });
 
+// Busca usuários e inicia o treinamento do modelo
 const users = await userService.getDefaultUsers();
 w.triggerTrain(users);
 
-
+// Inicialização dos controladores
 ModelController.init({
     modelView,
     userService,
@@ -50,7 +53,6 @@ ProductController.init({
     events: Events,
 });
 
-
 const userController = UserController.init({
     userView,
     userService,
@@ -58,7 +60,7 @@ const userController = UserController.init({
     events: Events,
 });
 
-
+// Renderiza usuários padrão incluindo um usuário de teste
 userController.renderUsers({
     "id": 99,
     "name": "Josézin da Silva",

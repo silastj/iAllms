@@ -1,16 +1,45 @@
+import { supabase } from './supabaseClient.js'
+
 export class ProductService {
     async getProducts() {
-        const response = await fetch('./data/products.json');
-        return await response.json();
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+
+        if (error) {
+            console.error(error)
+            return []
+        }
+
+        return data
     }
 
     async getProductById(id) {
-        const products = await this.getProducts();
-        return products.find(product => product.id === id);
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+        if (error) {
+            console.error(error)
+            return null
+        }
+
+        return data
     }
 
     async getProductsByIds(ids) {
-        const products = await this.getProducts();
-        return products.filter(product => ids.includes(product.id));
+        const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .in('id', ids)
+
+        if (error) {
+            console.error(error)
+            return []
+        }
+
+        return data
     }
 }

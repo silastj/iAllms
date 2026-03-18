@@ -43,10 +43,12 @@ function makeContext(products, users) {
     const ageCounts = {}
 
     users.forEach(user => {
-        user.purchases.forEach(p => {
-            ageSums[p.name] = (ageSums[p.name] || 0) + user.age
-            ageCounts[p.name] = (ageCounts[p.name] || 0) + 1
-        })
+        if (user.purchases && user.purchases.length > 0) {
+            user.purchases.forEach(p => {
+                ageSums[p.name] = (ageSums[p.name] || 0) + user.age
+                ageCounts[p.name] = (ageCounts[p.name] || 0) + 1
+            })
+        }
     });
 
     const productAvgAgeNorm = Object.fromEntries(
@@ -112,7 +114,8 @@ function encodeProduct(product, context) {
 }
 
 function encodeUser(user, context) {
-    if (user.purchases.length) {
+    // Verifica se purchases existe e tem elementos
+    if (user.purchases && user.purchases.length > 0) {
         return tf.stack(
             user.purchases.map(
                 product => encodeProduct(product, context)
@@ -126,10 +129,9 @@ function encodeUser(user, context) {
     }
 
     // Return zero vector if user has no purchases
-    // return tf.zeros([1, context.dimentions])
     return tf.concat1d(
         [
-            tf.zeros[1],
+            tf.zeros([1]),
             tf.tensor1d([
                 normalize(user.age, context.minAge, context.maxAge)
                 * WEIGHTS.age
@@ -146,7 +148,9 @@ function createTrainingData(context) {
         const userVector = encodeUser(user, context).dataSync()
         context.products.forEach(product => {
             const productVector = encodeProduct(product, context).dataSync()
-            const label = user.purchases.some(purchase => purchase.name === product.name) ? 1 : 0
+            const label = (user.purchases && user.purchases.length > 0)
+                ? user.purchases.some(purchase => purchase.name === product.name) ? 1 : 0
+                : 0
             inputs.push([...userVector, ...productVector])
             labels.push(label)
         })
@@ -231,7 +235,6 @@ async function trainModel({ users }) {
     const trainData = createTrainingData(context)
     console.log('🚀 Starting model training...');
     _model = await configureNeuralNetAndTrain(trainData)
-    console.log('✅ Model training completed!', _model);
 
     postMessage({ type: workerEvents.progressUpdate, progress: { progress: 100 } });
     postMessage({ type: workerEvents.trainingComplete });
@@ -259,7 +262,7 @@ function recommend(user) {
         }
     })
     const sortedItems = recommendations.sort((a, b) => b.score - a.score)
-    // console.log('will recommend for user:', user)
+
     postMessage({
         type: workerEvents.recommend,
         user,

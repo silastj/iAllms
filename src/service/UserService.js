@@ -1,47 +1,86 @@
+import { supabaseUsers } from './supabaseClient.js'
+
 export class UserService {
-    #storageKey = 'ew-academy-users';
+  async getDefaultUsers() {
+    const { data, error } = await supabaseUsers
+      .from('users')
+      .select('*')
 
-    async getDefaultUsers() {
-        const response = await fetch('./data/users.json');
-        const users = await response.json();
-        this.#setStorage(users);
-
-        return users;
+    if (error) {
+      console.error('Erro ao buscar usuários do Supabase:', error)
+      return []
     }
 
-    async getUsers() {
-        const users = this.#getStorage();
-        return users;
+    return data
+  }
+
+  async getUsers() {
+    return this.getDefaultUsers()
+  }
+
+  async getUserById(userId) {
+    const { data, error } = await supabaseUsers
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      console.error('Erro ao buscar usuário:', error)
+      return null
     }
 
-    async getUserById(userId) {
-        const users = this.#getStorage();
-        return users.find(user => user.id === userId);
+    return data
+  }
+
+  async addUser(user) {
+    const { data, error } = await supabaseUsers
+      .from('users')
+      .insert(user)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Erro ao adicionar usuário:', error)
+      return null
     }
 
-    async updateUser(user) {
-        const users = this.#getStorage();
-        const userIndex = users.findIndex(u => u.id === user.id);
+    return data
+  }
 
-        users[userIndex] = { ...users[userIndex], ...user };
-        this.#setStorage(users);
+  async updateUser(user) {
+    const { data, error } = await supabaseUsers
+      .from('users')
+      .update(user)
+      .eq('id', user.id)
+      .select()
+      .single()
 
-        return users[userIndex];
+    if (error) {
+      console.error('Erro ao atualizar usuário:', error)
+      return null
     }
 
-    async addUser(user) {
-        const users = this.#getStorage();
-        this.#setStorage([user, ...users]);
+    return data
+  }
+
+  async addPurchase(userId, productId) {
+    // Primeiro busca o usuário atual
+    const user = await this.getUserById(userId)
+
+    if (!user) {
+      console.error('Usuário não encontrado')
+      return null
     }
 
-    #getStorage() {
-        const data = sessionStorage.getItem(this.#storageKey);
-        return data ? JSON.parse(data) : [];
-    }
+    // Adiciona o novo produto às compras
+    const purchases = user.purchases || []
+    purchases.push(productId)
 
-    #setStorage(data) {
-        sessionStorage.setItem(this.#storageKey, JSON.stringify(data));
-    }
-
-
+    // Atualiza o usuário
+    return this.updateUser({
+      id: userId,
+      purchases
+    })
+  }
 }
